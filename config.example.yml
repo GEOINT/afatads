@@ -1,0 +1,49 @@
+# ─── AFATADS GTCS Client Configuration ───
+#
+# Supported endpoints: tcp, udp, rest
+# Enable one or more by listing them below.
+
+enabled_endpoints:
+  - tcp
+
+# ─── TCP / GTCS socket ───
+tcp:
+  host: "127.0.0.1"
+  port: 4011
+  reconnect_interval_s: 5.0
+  recv_buffer: 8192
+  delimiter: "\n"
+  tls: false
+  # tls_cert: "/path/to/client.crt"
+  # tls_key:  "/path/to/client.key"
+  # tls_ca:   "/path/to/ca.crt"
+
+# ─── UDP / multicast ───
+udp:
+  host: "239.1.1.1"
+  port: 4012
+  multicast: true
+  recv_buffer: 8192
+  # interface: "0.0.0.0"
+
+# ─── REST / TAK Server / HTTP polling ───
+rest:
+  base_url: "http://127.0.0.1:8080"
+  path: "/api/tidet"
+  poll_interval_s: 10.0
+  auth_type: ""          # basic | bearer | cert | ""
+  # username: "operator"
+  # password: "changeme"
+  # token: "eyJ..."
+  verify_ssl: true
+  timeout_s: 30.0
+
+# ─── On-disk TIDET store ───
+store:
+  root_dir: "./tidet_store"
+  indent_json: 2
+
+# ─── Logging ───
+logging:
+  level: "INFO"
+  # file: "./afatads.log"
