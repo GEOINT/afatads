@@ -1,16 +1,15 @@
 """Tests for configuration loading."""
 
 import tempfile
+import json
 from pathlib import Path
-
-import yaml
 
 from afatads.config import load_config
 
 
 def test_load_defaults():
-    with tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False) as f:
-        yaml.dump({"enabled_endpoints": ["tcp"]}, f)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"enabled_endpoints": ["tcp"]}, f)
         f.flush()
         cfg = load_config(f.name)
 
@@ -27,8 +26,8 @@ def test_load_overrides():
         "store": {"root_dir": "/data/tidet"},
         "logging": {"level": "DEBUG"},
     }
-    with tempfile.NamedTemporaryFile("w", suffix=".yml", delete=False) as f:
-        yaml.dump(data, f)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(data, f)
         f.flush()
         cfg = load_config(f.name)
 

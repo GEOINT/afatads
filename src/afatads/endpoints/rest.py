@@ -1,18 +1,15 @@
-"""REST / HTTP polling transport for TIDET events.
-
-Polls a TAK-Server-compatible REST endpoint at a configurable interval
-and yields parsed TIDET events.  Supports Basic, Bearer, and mutual-TLS
-authentication.
-"""
+"""REST / HTTP polling transport for TIDET events using standard urllib."""
 
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import urllib.request
+import urllib.parse
+import ssl as _ssl
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
-
-import aiohttp
 
 from afatads.config import RestEndpointConfig
 from afatads.model import TidetEvent, parse_tidet_wire
@@ -21,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 class RestTransport:
-    """Async HTTP polling client for TIDET REST endpoints."""
+    """Async HTTP polling client for TIDET REST endpoints using standard urllib."""
 
     def __init__(self, cfg: RestEndpointConfig) -> None:
         self._cfg = cfg
@@ -31,43 +28,53 @@ class RestTransport:
 
     async def stream(self) -> AsyncIterator[TidetEvent]:
         self._running = True
-        ssl_ctx = self._build_ssl() if (self._cfg.tls_cert or self._cfg.tls_ca) else None
+        loop = asyncio.get_running_loop()
 
-        connector = aiohttp.TCPConnector(ssl=ssl_ctx) if ssl_ctx else None
-        timeout = aiohttp.ClientTimeout(total=self._cfg.timeout_s)
+        while self._running:
+            try:
+                # Run the blocking poll in a thread pool
+                events = await loop.run_in_executor(None, self._poll_sync)
+                for evt in events:
+                    yield evt
+            except Exception as exc:
+                log.error("REST poll error: %s", exc)
+            
+            if not self._running:
+                break
 
-        async with aiohttp.ClientSession(
-            connector=connector, timeout=timeout,
-        ) as session:
-            while self._running:
-                try:
-                    events = await self._poll(session)
-                    for evt in events:
-                        yield evt
-                except aiohttp.ClientError as exc:
-                    log.error("REST poll error: %s", exc)
-                except asyncio.CancelledError:
-                    return
-
+            try:
                 await asyncio.sleep(self._cfg.poll_interval_s)
+            except asyncio.CancelledError:
+                break
 
     def stop(self) -> None:
         self._running = False
 
-    # ---------------------------------------------------------------
-    async def _poll(self, session: aiohttp.ClientSession) -> list[TidetEvent]:
+    def _poll_sync(self) -> list[TidetEvent]:
         url = self._cfg.base_url.rstrip("/") + self._cfg.path
-        headers = self._auth_headers()
         params: dict[str, str] = {}
         if self._last_poll:
             params["since"] = self._last_poll.isoformat()
 
-        self._last_poll = datetime.now(timezone.utc)
+        if params:
+            url += "?" + urllib.parse.urlencode(params)
 
-        async with session.get(url, headers=headers, params=params,
-                               ssl=self._cfg.verify_ssl) as resp:
-            resp.raise_for_status()
-            body = await resp.json(content_type=None)
+        self._last_poll = datetime.now(timezone.utc)
+        
+        headers = self._auth_headers()
+        req = urllib.request.Request(url, headers=headers)
+        
+        ssl_ctx = None
+        if self._cfg.tls_cert or self._cfg.tls_ca or not self._cfg.verify_ssl:
+            ssl_ctx = self._build_ssl()
+
+        try:
+            with urllib.request.urlopen(req, timeout=self._cfg.timeout_s, context=ssl_ctx) as resp:
+                body_raw = resp.read()
+                body = json.loads(body_raw.decode("utf-8"))
+        except Exception as e:
+            log.error("Failed to poll %s: %s", url, e)
+            return []
 
         results: list[TidetEvent] = []
         items: list[Any] = body if isinstance(body, list) else body.get("events", [])
@@ -102,8 +109,7 @@ class RestTransport:
             h["Authorization"] = f"Basic {cred}"
         return h
 
-    def _build_ssl(self) -> Any:
-        import ssl as _ssl
+    def _build_ssl(self) -> _ssl.SSLContext:
         ctx = _ssl.create_default_context(
             cafile=self._cfg.tls_ca or None,
         )

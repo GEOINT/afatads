@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import pathlib
 from dataclasses import dataclass, field
 from typing import Any
-
-import yaml
 
 
 # ---------------------------------------------------------------------------
@@ -94,10 +93,10 @@ def _apply_section(obj: Any, data: dict) -> None:
 
 
 def load_config(path: str | pathlib.Path) -> ClientConfig:
-    """Load a YAML config file and return a *ClientConfig*."""
+    """Load a JSON config file and return a *ClientConfig*."""
     path = pathlib.Path(path)
     with path.open("r", encoding="utf-8") as fh:
-        raw: dict = yaml.safe_load(fh) or {}
+        raw: dict = json.load(fh) or {}
 
     cfg = ClientConfig()
     if "tcp" in raw:

@@ -1,0 +1,34 @@
+{
+  "enabled_endpoints": [
+    "tcp"
+  ],
+  "tcp": {
+    "host": "127.0.0.1",
+    "port": 4011,
+    "reconnect_interval_s": 5.0,
+    "recv_buffer": 8192,
+    "delimiter": "\n",
+    "tls": false
+  },
+  "udp": {
+    "host": "239.1.1.1",
+    "port": 4012,
+    "multicast": true,
+    "recv_buffer": 8192
+  },
+  "rest": {
+    "base_url": "http://127.0.0.1:8080",
+    "path": "/api/tidet",
+    "poll_interval_s": 10.0,
+    "auth_type": "",
+    "verify_ssl": true,
+    "timeout_s": 30.0
+  },
+  "store": {
+    "root_dir": "./tidet_store",
+    "indent_json": 2
+  },
+  "logging": {
+    "level": "INFO"
+  }
+}

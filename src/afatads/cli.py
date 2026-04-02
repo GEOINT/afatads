@@ -1,12 +1,12 @@
 """CLI entry point for the AFATADS GTCS client.
 
 Usage:
-    afatads ingest  -c config.yml          # connect & ingest TIDET events
-    afatads read    -c config.yml --all     # dump all stored events
-    afatads read    -c config.yml --date 2026-04-01
-    afatads read    -c config.yml --range 2026-03-01 2026-04-01
-    afatads read    -c config.yml --target AB1234
-    afatads status  -c config.yml           # store stats
+    afatads -c config.json ingest          # connect & ingest TIDET events
+    afatads -c config.json read --all      # dump all stored events
+    afatads -c config.json read --date 2026-04-01
+    afatads -c config.json read --range 2026-03-01 2026-04-01
+    afatads -c config.json read --target AB1234
+    afatads -c config.json status          # store stats
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="AFATADS GTCS client — TIDET ingestion and retrieval",
     )
     p.add_argument("-c", "--config", required=True,
-                   help="Path to YAML configuration file")
+                   help="Path to JSON configuration file")
 
     sub = p.add_subparsers(dest="command", required=True)
 
